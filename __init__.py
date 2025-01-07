@@ -1,50 +1,49 @@
-# Create Home Assistant Integration
-# File: custom_components/watersmart/__init__.py
-
 import asyncio
 import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from .watersmart import WaterSmart
+from homeassistant.exceptions import ConfigEntryNotReady
+
 from .const import DOMAIN
+from .watersmart_client import WatersmartClient, WatersmartClientError
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "watersmart"
-
+async def async_setup(hass: HomeAssistant, config: dict):
+    """Set up the Watersmart integration."""
+    return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Set up WaterSmart from a config entry."""
-    username = entry.data.get("username")
-    password = entry.data.get("password")
+    """Set up Watersmart from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
 
-    watersmart = WaterSmart(username, password)
-
-    async def async_update_data():
-        try:
-            return await watersmart.get_usage()
-        except Exception as err:
-            raise UpdateFailed(f"Error fetching data: {err}")
-
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name="watersmart",
-        update_method=async_update_data,
-        update_interval=timedelta(minutes=5),
+    config = entry.data
+    client = WatersmartClient(
+        url=config["url"],
+        email=config["email"],
+        password=config["password"],
     )
 
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await client._login()
+    except WatersmartClientError as ex:
+        _LOGGER.error("Failed to connect to Watersmart API: %s", ex)
+        raise ConfigEntryNotReady from ex
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    hass.data[DOMAIN][entry.entry_id] = client
 
-    hass.config_entries.async_setup_platforms(entry, ["sensor"])
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "sensor")
+    )
 
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-    await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    await hass.data[DOMAIN][entry.entry_id]._close()
     hass.data[DOMAIN].pop(entry.entry_id)
+
+    await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+
     return True
