@@ -2,8 +2,8 @@
   "domain": "watersmart",
   "name": "WaterSmart",
   "version": "1.0.0",
-  "documentation": "https://your-docs-link",
+  "documentation": "https://github.com/john5373/watersmart",
   "requirements": ["aiohttp"],
-  "codeowners": ["@your-username"],
+  "codeowners": ["@yjohn5373"],
   "config_flow": true
 }
