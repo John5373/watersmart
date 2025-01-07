@@ -1,5 +1,6 @@
 from homeassistant.components.sensor import SensorEntity
 from datetime import datetime
+from homeassistant.helpers.service import async_register_admin_service
 from .const import DOMAIN
 import logging
 
@@ -26,6 +27,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         # Create a single sensor for the daily total
         sensor = WatersmartDailyTotalSensor(daily_data, client)
         async_add_entities([sensor], update_before_add=True)
+
+        # Register a service to manually fetch data
+        async def manually_fetch_data(call):
+            """Service to manually fetch new data for all sensors."""
+            await sensor.fetch_new_data()
+
+        async_register_admin_service(hass, DOMAIN, "fetch_data", manually_fetch_data)
+
     except Exception as e:
         _LOGGER.error("Error setting up Watersmart sensor: %s", e)
 
@@ -96,14 +105,19 @@ class WatersmartDailyTotalSensor(SensorEntity):
         """Fetch updated state data for the sensor."""
         now = datetime.utcnow()
         if self._last_fetch is None or (now - self._last_fetch).seconds >= 3600:  # Fetch data every hour
-            self._last_fetch = now
-            try:
-                usage_data = await self._client.usage()
-                today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-                self._daily_data = [
-                    entry for entry in usage_data
-                    if datetime.utcfromtimestamp(entry["read_datetime"]) >= today_start
-                ]
-                self._state = self.calculate_total()
-            except Exception as e:
-                _LOGGER.error("Error fetching updated data: %s", e)
+            await self.fetch_new_data()
+
+    async def fetch_new_data(self):
+        """Manually fetch new data and update the state."""
+        self._last_fetch = datetime.utcnow()
+        try:
+            usage_data = await self._client.usage()
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            self._daily_data = [
+                entry for entry in usage_data
+                if datetime.utcfromtimestamp(entry["read_datetime"]) >= today_start
+            ]
+            self._state = self.calculate_total()
+            _LOGGER.info("Manually fetched new data: %s", self._daily_data)
+        except Exception as e:
+            _LOGGER.error("Error manually fetching updated data: %s", e)
