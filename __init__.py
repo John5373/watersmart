@@ -2,12 +2,17 @@
 # File: custom_components/watersmart/__init__.py
 
 import asyncio
+import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .watersmart import WaterSmart
+from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "watersmart"
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up WaterSmart from a config entry."""
