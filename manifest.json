@@ -3,7 +3,10 @@
   "name": "WaterSmart",
   "version": "1.0.0",
   "documentation": "https://github.com/john5373/watersmart",
-  "requirements": ["aiohttp"],
+  "requirements": [
+    "aiohttp-client-cache>=0.7.1"
+  ],
   "codeowners": ["@john5373"],
+  "iot_class": "cloud_polling",
   "config_flow": true
 }
