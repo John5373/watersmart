@@ -67,6 +67,14 @@ class WatersmartDailyTotalSensor(SensorEntity):
             )
         return sum(entry["value"] for entry in self._daily_data)  # Sum gallons directly
 
+    def update_with_new_data(self, new_data):
+        """Include totals of all new data points."""
+        for entry in new_data:
+            if entry["read_datetime"] > (self._latest_read_datetime or 0):
+                self._daily_data.append(entry)
+                self._state += entry["value"]
+                self._latest_read_datetime = entry["read_datetime"]
+
     @property
     def name(self):
         """Return the name of the sensor."""
@@ -126,11 +134,11 @@ class WatersmartDailyTotalSensor(SensorEntity):
         try:
             usage_data = await self._client.usage()
             today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-            self._daily_data = [
+            new_data = [
                 entry for entry in usage_data
                 if datetime.utcfromtimestamp(entry["read_datetime"]) >= today_start
             ]
-            self._state = self.calculate_total()
+            self.update_with_new_data(new_data)
             _LOGGER.info("Manually fetched new data: %s", self._daily_data)
         except Exception as e:
             _LOGGER.error("Error manually fetching updated data: %s", e)
