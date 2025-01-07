@@ -43,6 +43,7 @@ class WatersmartDailyTotalSensor(SensorEntity):
         self._icon = "mdi:water-outline"
         self._device_class = "water"
         self._state_class = "total_increasing"
+        self._last_fetch = None
 
     def calculate_total(self):
         """Calculate the total gallons for the day."""
