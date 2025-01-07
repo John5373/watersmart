@@ -4,6 +4,7 @@ import async_timeout
 import logging
 import socket
 import time
+from .const import VERSION
 
 from aiohttp_client_cache import CachedSession, SQLiteBackend
 
@@ -33,7 +34,7 @@ class WatersmartClient:
             self._cache = SQLiteBackend(
                 expire_after=60 * 60 * 6,
                 include_headers=False,
-                cache_name="~/.cache/watersmart.db",
+                cache_name="~/.cache/py-watersmart.db",
             )
             self._session = CachedSession(
                 cache=self._cache,
@@ -42,6 +43,7 @@ class WatersmartClient:
         assert "watersmart.com" in url, "Expected a watersmart.com URL"
         assert "http" in url, "Expected an http/https schema"
         logging.debug("WatersmartClient ready, headers: %s", self._headers)
+
 
     async def _login(self):
         url = f"{self._url}/index.php/welcome/login?forceEmail=1"
