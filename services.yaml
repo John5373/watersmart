@@ -1,0 +1,3 @@
+fetch_data:
+  name: Fetch Data
+  description: Manually fetch water usage data.
