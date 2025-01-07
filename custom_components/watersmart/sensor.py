@@ -92,5 +92,16 @@ class WatersmartDailyTotalSensor(SensorEntity):
 
     async def async_update(self):
         """Fetch updated state data for the sensor."""
-        # Recalculate the total when new data is available
-        self._state = self.calculate_total()
+        now = datetime.utcnow()
+        if (now - self._last_fetch).seconds >= 3600:  # Fetch data every hour
+            self._last_fetch = now
+            try:
+                usage_data = await self._client.usage()
+                today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+                self._daily_data = [
+                    entry for entry in usage_data
+                    if datetime.utcfromtimestamp(entry["read_datetime"]) >= today_start
+                ]
+                self._state = self.calculate_total()
+            except Exception as e:
+                _LOGGER.error("Error fetching updated data: %s", e)
