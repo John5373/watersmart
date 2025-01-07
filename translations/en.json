@@ -1,0 +1,18 @@
+{
+  "title": "WaterSmart",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to WaterSmart",
+        "description": "Enter your WaterSmart account details.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Authentication failed. Please check your credentials."
+    }
+  }
+}
