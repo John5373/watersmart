@@ -48,8 +48,59 @@
 
 #     return True
 
+
+
+
+
+# from homeassistant.components.sensor import SensorEntity
+# from homeassistant.const import CONF_URL, CONF_EMAIL, CONF_PASSWORD
+
+# from .const import DOMAIN
+
+# async def async_setup_entry(hass, config_entry, async_add_entities):
+#     """Set up Watersmart sensors from a config entry."""
+#     client = hass.data[DOMAIN][config_entry.entry_id]
+
+#     sensors = []
+
+#     # Assuming the API provides a list of metrics (e.g., water usage data)
+#     usage_data = await client.usage()
+#     for metric in usage_data:
+#         sensors.append(WatersmartSensor(metric))
+
+#     async_add_entities(sensors, update_before_add=True)
+
+
+# class WatersmartSensor(SensorEntity):
+#     """Representation of a Watersmart sensor."""
+
+#     def __init__(self, metric):
+#         self._metric = metric
+#         self._name = metric.get("name", "Unknown Sensor")
+#         self._state = metric.get("value", None)
+#         self._unit = metric.get("unit", None)
+
+#     @property
+#     def name(self):
+#         """Return the name of the sensor."""
+#         return self._name
+
+#     @property
+#     def state(self):
+#         """Return the state of the sensor."""
+#         return self._state
+
+#     @property
+#     def unit_of_measurement(self):
+#         """Return the unit of measurement."""
+#         return self._unit
+
+#     async def async_update(self):
+#         """Fetch new state data for the sensor."""
+#         self._state = self._metric.get("value")
+
+
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import CONF_URL, CONF_EMAIL, CONF_PASSWORD
 from .const import DOMAIN
 import logging
 
@@ -63,8 +114,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         # Fetch data from the client
         usage_data = await client.usage()
 
-        # Debug: Log the raw data fetched
-        _LOGGER.debug("Fetched usage data: %s", usage_data)
+        # Log the processed data
+        _LOGGER.debug("Processed sensor data: %s", usage_data)
 
         # Create sensors for each metric
         sensors = [WatersmartSensor(metric) for metric in usage_data]
@@ -79,10 +130,10 @@ class WatersmartSensor(SensorEntity):
     def __init__(self, metric):
         """Initialize the sensor with a metric."""
         self._metric = metric
-        self._name = metric.get("name", "Unknown Sensor")
-        self._state = metric.get("value", None)
-        self._unit = metric.get("unit", None)
-        self._unique_id = f"watersmart_{self._name.replace(' ', '_').lower()}"
+        self._name = metric["name"]
+        self._state = metric["value"]
+        self._unit = metric["unit"]
+        self._unique_id = f"watersmart_{metric['read_datetime']}"
 
     @property
     def name(self):
@@ -106,11 +157,5 @@ class WatersmartSensor(SensorEntity):
 
     async def async_update(self):
         """Fetch updated state data for the sensor."""
-        try:
-            # If the metric data is updated dynamically, refetch it here
-            updated_value = self._metric.get("value")
-            if updated_value is not None:
-                self._state = updated_value
-        except Exception as e:
-            _LOGGER.error("Error updating Watersmart sensor %s: %s", self._name, e)
-
+        # Updates if needed (not necessary here as data is static per timestamp)
+        pass
