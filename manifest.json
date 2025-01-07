@@ -1,0 +1,9 @@
+{
+  "domain": "watersmart",
+  "name": "WaterSmart",
+  "version": "1.0.0",
+  "documentation": "https://your-docs-link",
+  "requirements": ["aiohttp"],
+  "codeowners": ["@your-username"],
+  "config_flow": true
+}
