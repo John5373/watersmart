@@ -1,0 +1,2 @@
+DOMAIN = "watersmart"
+PLATFORMS = ["sensor"]
