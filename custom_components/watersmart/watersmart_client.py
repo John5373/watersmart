@@ -30,11 +30,11 @@ class WatersmartClient:
         if session:
             self._session = session
         else:
-            self._headers = {"User-Agent": "py-watersmart " + version("py-watersmart")}
+            self._headers = {"User-Agent": "watersmart " + version("watersmart")}
             self._cache = SQLiteBackend(
                 expire_after=60 * 60 * 6,
                 include_headers=False,
-                cache_name="~/.cache/py-watersmart.db",
+                cache_name="~/.cache/watersmart.db",
             )
             self._session = CachedSession(
                 cache=self._cache,
