@@ -72,12 +72,14 @@ class WatersmartClient:
         result["local_datetime"] = time.strftime("%Y-%m-%d %H:%M:%S", ts)
         return result
 
-  async def usage(self):
+    async def usage(self):
         """Fetch water usage data."""
         if not self._data_series:
             try:
                 async with async_timeout.timeout(10):
                     self._logger.debug("Loading watersmart data from %s", self._url)
+
+                    # Log in and fetch data
                     await self._login()
                     await self._populate_data()
             except WatersmartClientAuthenticationError as e:
@@ -85,10 +87,14 @@ class WatersmartClient:
                 raise
             except asyncio.TimeoutError as e:
                 self._logger.error("Timeout error while fetching data: %s", e)
-                raise WatersmartClientCommunicationError("Timeout error fetching information") from e
+                raise WatersmartClientCommunicationError(
+                    "Timeout error fetching information"
+                ) from e
             except (aiohttp.ClientError, socket.gaierror) as e:
                 self._logger.error("Network error while fetching data: %s", e)
-                raise WatersmartClientCommunicationError("Error fetching information") from e
+                raise WatersmartClientCommunicationError(
+                    "Error fetching information"
+                ) from e
             except Exception as e:
                 self._logger.error("Unexpected error: %s", e)
                 raise WatersmartClientError("An unexpected error occurred!") from e
@@ -107,7 +113,7 @@ class WatersmartClient:
                     "unit": "gallons",
                     "read_datetime": datapoint["read_datetime"],
                 }
-                result.append(parsed_datapoint)
+                result.append(WatersmartClient._amend_with_local_ts(parsed_datapoint))
             self._logger.debug("Parsed data for sensors: %s", result)
             return result
         except KeyError as e:
