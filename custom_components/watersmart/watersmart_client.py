@@ -72,14 +72,12 @@ class WatersmartClient:
         result["local_datetime"] = time.strftime("%Y-%m-%d %H:%M:%S", ts)
         return result
 
-    async def usage(self):
+  async def usage(self):
         """Fetch water usage data."""
         if not self._data_series:
             try:
                 async with async_timeout.timeout(10):
                     self._logger.debug("Loading watersmart data from %s", self._url)
-
-                    # Log in and fetch data
                     await self._login()
                     await self._populate_data()
             except WatersmartClientAuthenticationError as e:
@@ -87,29 +85,30 @@ class WatersmartClient:
                 raise
             except asyncio.TimeoutError as e:
                 self._logger.error("Timeout error while fetching data: %s", e)
-                raise WatersmartClientCommunicationError(
-                    "Timeout error fetching information"
-                ) from e
+                raise WatersmartClientCommunicationError("Timeout error fetching information") from e
             except (aiohttp.ClientError, socket.gaierror) as e:
                 self._logger.error("Network error while fetching data: %s", e)
-                raise WatersmartClientCommunicationError(
-                    "Error fetching information"
-                ) from e
+                raise WatersmartClientCommunicationError("Error fetching information") from e
             except Exception as e:
                 self._logger.error("Unexpected error: %s", e)
                 raise WatersmartClientError("An unexpected error occurred!") from e
             finally:
                 await self._close()
 
-        # Log the raw data fetched
         self._logger.debug("Raw data series: %s", self._data_series)
 
         # Parse the data
         try:
             result = []
             for datapoint in self._data_series:
-                result.append(WatersmartClient._amend_with_local_ts(datapoint))
-            self._logger.debug("Parsed data: %s", result)
+                parsed_datapoint = {
+                    "name": f"Water Usage {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(datapoint['read_datetime']))}",
+                    "value": datapoint["gallons"],
+                    "unit": "gallons",
+                    "read_datetime": datapoint["read_datetime"],
+                }
+                result.append(parsed_datapoint)
+            self._logger.debug("Parsed data for sensors: %s", result)
             return result
         except KeyError as e:
             self._logger.error("Key error while parsing data: %s", e)
