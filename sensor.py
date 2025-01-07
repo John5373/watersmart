@@ -1,37 +1,49 @@
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import asyncio
+import logging
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+
 from .const import DOMAIN
+from .watersmart_client import WatersmartClient, WatersmartClientError
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up WaterSmart sensors from a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    sensors = [
-        WaterSmartSensor(coordinator, "daily_usage"),
-        WaterSmartSensor(coordinator, "monthly_usage"),
-        WaterSmartSensor(coordinator, "hourly_usage"),
-    ]
-    async_add_entities(sensors)
+_LOGGER = logging.getLogger(__name__)
 
-class WaterSmartSensor(CoordinatorEntity, Entity):
-    def __init__(self, coordinator, sensor_type):
-        super().__init__(coordinator)
-        self.type = sensor_type
+async def async_setup(hass: HomeAssistant, config: dict):
+    """Set up the Watersmart integration."""
+    return True
 
-    @property
-    def name(self):
-        return f"WaterSmart {self.type}"
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up Watersmart from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
 
-    @property
-    def state(self):
-        return self.coordinator.data.get(self.type)
+    config = entry.data
+    client = WatersmartClient(
+        url=config["url"],
+        email=config["email"],
+        password=config["password"],
+    )
 
-    @property
-    def unique_id(self):
-        return f"watersmart_{self.type}"
+    try:
+        await client._login()
+    except WatersmartClientError as ex:
+        _LOGGER.error("Failed to connect to Watersmart API: %s", ex)
+        raise ConfigEntryNotReady from ex
 
-    @property
-    def device_class(self):
-        return "water"
+    hass.data[DOMAIN][entry.entry_id] = client
 
-    async def async_update(self):
-        await self.coordinator.async_request_refresh()
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "sensor")
+    )
+
+    return True
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Unload a config entry."""
+    await hass.data[DOMAIN][entry.entry_id]._close()
+    hass.data[DOMAIN].pop(entry.entry_id)
+
+    await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+
+    return True
