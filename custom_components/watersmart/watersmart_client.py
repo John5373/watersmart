@@ -6,7 +6,6 @@ import socket
 import time
 
 from aiohttp_client_cache import CachedSession, SQLiteBackend
-from importlib.metadata import version
 
 
 class WatersmartClientError(Exception):
@@ -30,7 +29,7 @@ class WatersmartClient:
         if session:
             self._session = session
         else:
-            self._headers = {"User-Agent": "watersmart " + version("watersmart")}
+            self._headers = {"User-Agent": f"watersmart/{VERSION}"}
             self._cache = SQLiteBackend(
                 expire_after=60 * 60 * 6,
                 include_headers=False,
