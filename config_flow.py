@@ -1,64 +1,43 @@
-# File: custom_components/watersmart/config_flow.py
 from homeassistant import config_entries
-from homeassistant.core import callback
 import voluptuous as vol
-from .const import DOMAIN
+from aiohttp import ClientError
 
-class WaterSmartConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for WaterSmart integration."""
+from .const import DOMAIN
+from .watersmart_client import WatersmartClient, WatersmartClientError
+
+class WatersmartConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Watersmart."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
 
         if user_input is not None:
-            username = user_input.get("username")
-            password = user_input.get("password")
-
-            # Validate the credentials here
+            # Validate the input
             try:
-                from .watersmart import WaterSmart
+                client = WatersmartClient(
+                    url=user_input["url"],
+                    email=user_input["email"],
+                    password=user_input["password"],
+                )
+                await client._login()  # Test login
+            except WatersmartClientError:
+                errors["base"] = "cannot_connect"
+            except ClientError:
+                errors["base"] = "client_error"
+            else:
+                # Save the configuration
+                return self.async_create_entry(title="Watersmart", data=user_input)
 
-                watersmart = WaterSmart(username, password)
-                await watersmart._authenticate()
-                await watersmart.close()
-
-                return self.async_create_entry(title="WaterSmart", data=user_input)
-
-            except Exception as e:
-                errors["base"] = "auth_failed"
-
-        data_schema = vol.Schema({
-            vol.Required("username"): str,
-            vol.Required("password"): str,
-        })
-
-        return self.async_show_form(
-            step_id="user", data_schema=data_schema, errors=errors
+        # Define the input schema
+        data_schema = vol.Schema(
+            {
+                vol.Required("url"): str,
+                vol.Required("email"): str,
+                vol.Required("password"): str,
+            }
         )
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
-        """Get the options flow for this handler."""
-        return WaterSmartOptionsFlowHandler(config_entry)
-
-class WaterSmartOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle options for WaterSmart integration."""
-
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
-
-    async def async_step_init(self, user_input=None):
-        """Manage the options."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
-
-        data_schema = vol.Schema({
-            vol.Optional("update_interval", default=self.config_entry.options.get("update_interval", 5)): int,
-        })
-
-        return self.async_show_form(step_id="init", data_schema=data_schema)
+        return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
