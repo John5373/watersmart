@@ -4,6 +4,6 @@
   "version": "1.0.0",
   "documentation": "https://github.com/john5373/watersmart",
   "requirements": ["aiohttp"],
-  "codeowners": ["@yjohn5373"],
+  "codeowners": ["@john5373"],
   "config_flow": true
 }
