@@ -1,3 +1,35 @@
+from homeassistant.components.sensor import SensorEntity
+from datetime import datetime
+from .const import DOMAIN
+import logging
+
+_LOGGER = logging.getLogger(__name__)
+
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up Watersmart sensors from a config entry."""
+    client = hass.data[DOMAIN][config_entry.entry_id]
+
+    try:
+        # Fetch data from the client
+        usage_data = await client.usage()
+
+        # Filter data starting from today
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_data = [
+            entry for entry in usage_data
+            if datetime.utcfromtimestamp(entry["read_datetime"]) >= today_start
+        ]
+
+        # Log the filtered data
+        _LOGGER.debug("Filtered sensor data for today: %s", daily_data)
+
+        # Create a single sensor for the daily total
+        sensor = WatersmartDailyTotalSensor(daily_data, client)
+        async_add_entities([sensor], update_before_add=True)
+    except Exception as e:
+        _LOGGER.error("Error setting up Watersmart sensor: %s", e)
+
+
 class WatersmartDailyTotalSensor(SensorEntity):
     """Representation of a Watersmart daily total sensor."""
 
@@ -12,7 +44,7 @@ class WatersmartDailyTotalSensor(SensorEntity):
         self._icon = "mdi:water-outline"
         self._device_class = "water"
         self._state_class = "total_increasing"
-        self._last_fetch = None  # Initialize the last fetch timestamp as None
+        self._last_fetch = None
 
     def calculate_total(self):
         """Calculate the total gallons for the day."""
