@@ -13,7 +13,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         # Fetch data from the client
         usage_data = await client.usage()
 
-        # Filter data starting from today
+        # Filter data for today
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         daily_data = [
             entry for entry in usage_data
@@ -46,7 +46,7 @@ class WatersmartDailyTotalSensor(SensorEntity):
 
     def calculate_total(self):
         """Calculate the total gallons for the day."""
-        return sum(entry["value"] for entry in self._daily_data)
+        return sum(entry["value"] for entry in self._daily_data)  # Sum gallons directly
 
     @property
     def name(self):
@@ -67,6 +67,28 @@ class WatersmartDailyTotalSensor(SensorEntity):
     def unique_id(self):
         """Return a unique ID for the sensor."""
         return self._unique_id
+
+    @property
+    def icon(self):
+        """Return the icon for the sensor."""
+        return self._icon
+
+    @property
+    def device_class(self):
+        """Return the device class for the sensor."""
+        return self._device_class
+
+    @property
+    def state_class(self):
+        """Return the state class for the sensor."""
+        return self._state_class
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional attributes for compatibility with energy dashboard."""
+        return {
+            "last_reset": datetime.utcnow().isoformat(),
+        }
 
     async def async_update(self):
         """Fetch updated state data for the sensor."""
